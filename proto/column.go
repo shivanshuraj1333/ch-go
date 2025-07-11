@@ -142,7 +142,7 @@ func (c ColumnType) Conflicts(b ColumnType) bool {
 	switch cBase {
 	case ColumnTypeArray, ColumnTypeNullable, ColumnTypeLowCardinality:
 		return c.Elem().Conflicts(b.Elem())
-	case ColumnTypeDateTime, ColumnTypeDateTime64:
+	case ColumnTypeDateTime, ColumnTypeDateTime64, ColumnTypeTime, ColumnTypeTime64:
 		// TODO(ernado): improve check
 		return false
 	}
@@ -232,6 +232,8 @@ const (
 	ColumnTypeIPv6           ColumnType = "IPv6"
 	ColumnTypeDateTime       ColumnType = "DateTime"
 	ColumnTypeDateTime64     ColumnType = "DateTime64"
+	ColumnTypeTime           ColumnType = "Time"
+	ColumnTypeTime64         ColumnType = "Time64"
 	ColumnTypeDate           ColumnType = "Date"
 	ColumnTypeDate32         ColumnType = "Date32"
 	ColumnTypeUUID           ColumnType = "UUID"

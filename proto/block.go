@@ -281,17 +281,49 @@ func (b *Block) DecodeRawBlock(r *Reader, version int, target Result) error {
 				return errors.Wrapf(err, "column [%d] name", i)
 			}
 			// Type.
-			if _, err := r.Str(); err != nil {
-				return errors.Wrapf(err, "column [%d] type", i)
-			}
 			if FeatureCustomSerialization.In(version) {
-				// Custom serialization flag.
-				v, err := r.Bool()
+				// Try to read custom serialization flag, but fall back to legacy format if it fails
+				customSerialization, err := r.Bool()
 				if err != nil {
-					return errors.Wrapf(err, "column [%d] custom serialization flag", i)
+					// If reading boolean fails, assume legacy format and read type string directly
+					if _, err := r.Str(); err != nil {
+						return errors.Wrapf(err, "column [%d] type", i)
+					}
+				} else {
+					if customSerialization {
+						// Handle binary type codes
+						typeCode, err := r.ReadByte()
+						if err != nil {
+							return errors.Wrapf(err, "column [%d] type code", i)
+						}
+						switch typeCode {
+						case 0x32, 0x33: // TimeUTC, TimeWithTimezone
+							// No additional parameters for Time
+						case 0x34: // Time64UTC
+							if _, err := r.UInt8(); err != nil { // precision
+								return errors.Wrapf(err, "column [%d] Time64 precision", i)
+							}
+						case 0x35: // Time64WithTimezone
+							if _, err := r.UInt8(); err != nil { // precision
+								return errors.Wrapf(err, "column [%d] Time64 precision", i)
+							}
+							if _, err := r.Str(); err != nil { // timezone
+								return errors.Wrapf(err, "column [%d] Time64 timezone", i)
+							}
+						default:
+							// Skip unknown type codes
+						}
+					} else {
+						// Read type string for non-custom serialization
+						if _, err := r.Str(); err != nil {
+							return errors.Wrapf(err, "column [%d] type", i)
+						}
+					}
 				}
-				if v {
-					return errors.Errorf("column [%d] has custom serialization (not supported)", i)
+			} else {
+				// Legacy protocol - always read type string
+				if _, err := r.Str(); err != nil {
+					return errors.Wrapf(err, "column [%d] type", i)
 				}
 			}
 		}

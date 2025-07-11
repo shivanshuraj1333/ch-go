@@ -21,6 +21,7 @@ const (
 	KindIP
 	KindDateTime
 	KindDate
+	KindTime
 	KindEnum
 	KindDecimal
 	KindFixedStr
@@ -168,7 +169,7 @@ func (v Variant) Complex() bool {
 
 func (v Variant) Time() bool {
 	switch v.Kind {
-	case KindDate, KindDateTime:
+	case KindDate, KindDateTime, KindTime:
 		return true
 	default:
 		return false
@@ -180,7 +181,11 @@ func (v Variant) Date() bool {
 }
 
 func (v Variant) DateTime() bool {
-	return v.Kind == KindDateTime
+	return v.Kind == KindDateTime || v.Kind == KindTime
+}
+
+func (v Variant) IsTime() bool {
+	return v.Kind == KindTime
 }
 
 func (v Variant) FixedStr() bool {
@@ -214,6 +219,12 @@ func (v Variant) ElemType() string {
 			return "Date32"
 		}
 		return "Date"
+	}
+	if v.Kind == KindTime {
+		if v.Bits == 64 {
+			return "Time64"
+		}
+		return "Time"
 	}
 	var b strings.Builder
 	var (
@@ -312,6 +323,16 @@ func run() error {
 			Signed: true,
 			Kind:   KindDate,
 		},
+		{ // Time
+			Bits:   64,
+			Signed: true,
+			Kind:   KindTime,
+		},
+		{ // Time64
+			Bits:   64,
+			Signed: true,
+			Kind:   KindTime,
+		},
 		{ // Enum8
 			Bits:   8,
 			Signed: true,
@@ -381,7 +402,7 @@ func run() error {
 		if v.Kind == KindFixedStr {
 			base = "col_fixedstr" + strconv.Itoa(v.Bytes())
 		}
-		if !v.DateTime() {
+		if !v.DateTime() && !v.IsTime() {
 			if err := write(base+"_gen", v, tpl); err != nil {
 				return errors.Wrap(err, "write")
 			}
@@ -401,7 +422,7 @@ func run() error {
 	var infer []Variant
 	for _, v := range variants {
 		switch v.Kind {
-		case KindDateTime, KindEnum, KindDecimal:
+		case KindDateTime, KindTime, KindEnum, KindDecimal:
 			continue
 		default:
 			infer = append(infer, v)

@@ -3,6 +3,7 @@ package proto
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 
@@ -278,6 +279,13 @@ func (r *Reader) Bool() (bool, error) {
 		return false, nil
 	default:
 		return false, errors.Errorf("unexpected value %d for boolean", v)
+	}
+}
+
+func (r *Reader) DebugPeek(n int) {
+	buf, err := r.raw.Peek(n)
+	if err == nil {
+		fmt.Printf("DEBUG: next %d bytes: % x\n", n, buf)
 	}
 }
 
